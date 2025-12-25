@@ -1,6 +1,6 @@
 package com.manajemenservis.controller;
 
-import com.manajemenservis.util.ExcelHandler; // Import helper yang baru kita buat
+import com.manajemenservis.util.ExcelHandler;
 import com.manajemenservis.view.DashboardView;
 import com.manajemenservis.view.LoginView;
 
@@ -10,7 +10,6 @@ public class AuthController {
 
     public void login(String username, String password, LoginView currentView) {
 
-        // 1. Validasi Input Kosong
         if (username.trim().isEmpty() || password.trim().isEmpty()) {
             JOptionPane.showMessageDialog(currentView,
                     "Username dan Password tidak boleh kosong!",
@@ -18,18 +17,14 @@ public class AuthController {
             return;
         }
 
-        // 2. Cek Login menggunakan ExcelHandler
-        // Kita tidak lagi pakai DatabaseConnection / SQL
         boolean isLoginSuccess = ExcelHandler.cekLogin(username, password);
 
         if (isLoginSuccess) {
             JOptionPane.showMessageDialog(currentView, "Login Berhasil");
 
-            // Buka Dashboard
             DashboardView dashboard = new DashboardView();
             dashboard.setVisible(true);
 
-            // Tutup Login
             currentView.dispose();
         } else {
             JOptionPane.showMessageDialog(currentView,
