@@ -76,7 +76,7 @@ public class CustomerTable extends JFrame {
         txtSearch = createSearchField();
         setupSearchLogic();
 
-        JButton btnAdd = new JButton("+ New Customer");
+        JButton btnAdd = new JButton("New Customer");
         styleButtonPrimary(btnAdd);
         btnAdd.addActionListener(e -> {
             new CustomerForm().setVisible(true);

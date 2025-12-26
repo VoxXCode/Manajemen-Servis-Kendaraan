@@ -6,121 +6,224 @@ import com.manajemenservis.model.Vehicle;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.border.TitledBorder;
 import java.awt.*;
 
 public class CustomerForm extends JFrame {
 
-    private JTextField txtNama, txtHp, txtAlamat;
-    private JTextField txtPlat, txtMerk, txtTipe, txtTahun;
+    // --- WARNA TEMA ---
+    private final Color COLOR_BG_MAIN     = new Color(18, 18, 18);
+    private final Color COLOR_BG_FORM     = new Color(30, 30, 30);
+    private final Color COLOR_TEXT_WHITE  = new Color(255, 255, 255);
+    private final Color COLOR_TEXT_GRAY   = new Color(170, 170, 170);
+    private final Color COLOR_ACCENT      = new Color(65, 105, 225);
+    private final Color COLOR_BORDER      = new Color(60, 60, 60);
+    private final Color COLOR_INPUT_BG    = new Color(45, 45, 45);
+
+    private final Font FONT_LABEL = new Font("SansSerif", Font.BOLD, 13);
+    private final Font FONT_INPUT = new Font("SansSerif", Font.PLAIN, 14);
+    private final Font FONT_TITLE = new Font("SansSerif", Font.BOLD, 24);
+
+    private JTextField txtNama, txtHp, txtAlamat, txtPlat, txtMerk, txtTipe, txtTahun;
     private CustomerController controller;
-
-    // Variabel untuk mode Edit
     private boolean isEditMode = false;
-    private String oldPlatNumber = "";
+    private String oldPlat = "";
 
-    // Constructor 1: Untuk Tambah Data Baru
     public CustomerForm() {
-        initUI();
+        this(null);
     }
 
-    // Constructor 2: Untuk Edit Data (Menerima data yang dipilih)
-    public CustomerForm(String[] data) {
-        initUI();
-        isEditMode = true;
-        oldPlatNumber = data[3]; // Simpan plat lama untuk referensi update
-
-        // Isi form dengan data lama
-        txtNama.setText(data[0]);
-        txtHp.setText(data[1]);
-        txtAlamat.setText(data[2]);
-        txtPlat.setText(data[3]);
-        txtMerk.setText(data[4]);
-        txtTipe.setText(data[5]);
-        txtTahun.setText(data[6]);
-
-        setTitle("Edit Data Pelanggan");
-    }
-
-    private void initUI() {
+    public CustomerForm(String[] dataToEdit) {
         controller = new CustomerController();
-        setTitle("Form Data Pelanggan");
-        setSize(500, 600);
-        setLocationRelativeTo(null);
+        setTitle(dataToEdit == null ? "Tambah Data Baru" : "Edit Data");
+
+        // [UBAH UKURAN] Menjadi Landscape (Lebar > Tinggi)
+        setSize(900, 550);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setResizable(false); // Fix ukuran agar tidak berantakan
         setLayout(new BorderLayout());
 
-        // Event listener saat form ditutup -> Buka tabel lagi
-        addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosed(java.awt.event.WindowEvent windowEvent) {
-                new CustomerTable().setVisible(true);
-            }
-        });
+        // --- HEADER ---
+        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 30, 25));
+        headerPanel.setBackground(COLOR_BG_MAIN);
+        JLabel lblTitle = new JLabel(dataToEdit == null ? "Tambah Pelanggan Baru" : "Edit Data Pelanggan");
+        lblTitle.setFont(FONT_TITLE);
+        lblTitle.setForeground(COLOR_TEXT_WHITE);
+        headerPanel.add(lblTitle);
+        add(headerPanel, BorderLayout.NORTH);
 
-        JPanel mainPanel = new JPanel(new GridLayout(8, 2, 10, 10));
-        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        // --- FORM CONTENT (SPLIT 2 KOLOM) ---
+        JPanel mainContent = new JPanel(new GridLayout(1, 2, 40, 0)); // 1 Baris, 2 Kolom, Jarak 40px
+        mainContent.setBackground(COLOR_BG_MAIN);
+        mainContent.setBorder(new EmptyBorder(10, 40, 10, 40));
 
-        mainPanel.add(new JLabel("Nama Pemilik:"));
-        txtNama = new JTextField(); mainPanel.add(txtNama);
+        // Inisialisasi TextFields
+        txtNama = createTextField();
+        txtHp = createTextField();
+        txtAlamat = createTextField();
+        txtPlat = createTextField();
+        txtMerk = createTextField();
+        txtTipe = createTextField();
+        txtTahun = createTextField();
 
-        mainPanel.add(new JLabel("Nomor HP:"));
-        txtHp = new JTextField(); mainPanel.add(txtHp);
+        // -- PANEL KIRI (PELANGGAN) --
+        JPanel pnlLeft = new JPanel(new GridBagLayout());
+        pnlLeft.setBackground(COLOR_BG_MAIN);
+        createSectionTitle(pnlLeft, "Data Pemilik", 0);
 
-        mainPanel.add(new JLabel("Alamat:"));
-        txtAlamat = new JTextField(); mainPanel.add(txtAlamat);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0; gbc.gridx = 0; gbc.insets = new Insets(5, 0, 5, 0);
 
-        mainPanel.add(new JLabel("Plat Nomor:"));
-        txtPlat = new JTextField(); mainPanel.add(txtPlat);
+        addFormItem(pnlLeft, gbc, 1, "Nama Pemilik", txtNama);
+        addFormItem(pnlLeft, gbc, 2, "Nomor HP", txtHp);
+        addFormItem(pnlLeft, gbc, 3, "Alamat", txtAlamat);
 
-        mainPanel.add(new JLabel("Merk Kendaraan:"));
-        txtMerk = new JTextField(); mainPanel.add(txtMerk);
+        // Spacer Vertikal agar konten naik ke atas
+        gbc.gridy = 10; gbc.weighty = 1.0; pnlLeft.add(Box.createGlue(), gbc);
 
-        mainPanel.add(new JLabel("Tipe Kendaraan:"));
-        txtTipe = new JTextField(); mainPanel.add(txtTipe);
+        // -- PANEL KANAN (KENDARAAN) --
+        JPanel pnlRight = new JPanel(new GridBagLayout());
+        pnlRight.setBackground(COLOR_BG_MAIN);
+        createSectionTitle(pnlRight, "Data Kendaraan", 0);
 
-        mainPanel.add(new JLabel("Tahun:"));
-        txtTahun = new JTextField(); mainPanel.add(txtTahun);
+        // Reset GBC
+        gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0; gbc.gridx = 0; gbc.insets = new Insets(5, 0, 5, 0);
 
-        JButton btnSimpan = new JButton("Simpan Data");
-        btnSimpan.setBackground(new Color(65, 105, 225));
-        btnSimpan.setForeground(Color.WHITE);
-        btnSimpan.addActionListener(e -> simpan());
+        addFormItem(pnlRight, gbc, 1, "Plat Nomor", txtPlat);
+        addFormItem(pnlRight, gbc, 2, "Merk Kendaraan", txtMerk);
+        addFormItem(pnlRight, gbc, 3, "Tipe Kendaraan", txtTipe);
+        addFormItem(pnlRight, gbc, 4, "Tahun Pembuatan", txtTahun);
 
-        add(mainPanel, BorderLayout.CENTER);
-        add(btnSimpan, BorderLayout.SOUTH);
+        // Spacer Vertikal
+        gbc.gridy = 10; gbc.weighty = 1.0; pnlRight.add(Box.createGlue(), gbc);
+
+        // Gabungkan Panel
+        mainContent.add(pnlLeft);
+        mainContent.add(pnlRight);
+        add(mainContent, BorderLayout.CENTER);
+
+        // --- FOOTER BUTTONS ---
+        JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 20));
+        footerPanel.setBackground(COLOR_BG_MAIN);
+        footerPanel.setBorder(new EmptyBorder(0, 40, 25, 40));
+
+        JButton btnCancel = new JButton("Batal");
+        styleButtonSecondary(btnCancel);
+        btnCancel.addActionListener(e -> backToTable());
+
+        JButton btnSave = new JButton("Simpan Data");
+        styleButtonPrimary(btnSave);
+        btnSave.addActionListener(e -> saveData());
+
+        footerPanel.add(btnCancel);
+        footerPanel.add(btnSave);
+        add(footerPanel, BorderLayout.SOUTH);
+
+        // Isi Data Mode Edit
+        if (dataToEdit != null) {
+            isEditMode = true;
+            txtNama.setText(dataToEdit[0]);
+            txtHp.setText(dataToEdit[1]);
+            txtAlamat.setText(dataToEdit[2]);
+            txtPlat.setText(dataToEdit[3]);
+            txtMerk.setText(dataToEdit[4]);
+            txtTipe.setText(dataToEdit[5]);
+            txtTahun.setText(dataToEdit[6]);
+            oldPlat = dataToEdit[3];
+        }
     }
 
-    private void simpan() {
-        String nama = txtNama.getText();
-        String hp = txtHp.getText();
-        String alamat = txtAlamat.getText();
-        String plat = txtPlat.getText();
-        String merk = txtMerk.getText();
-        String tipe = txtTipe.getText();
-        String tahunStr = txtTahun.getText();
+    // --- HELPER METHODS ---
 
-        if (nama.isEmpty() || plat.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nama dan Plat Nomor wajib diisi!");
+    private void createSectionTitle(JPanel panel, String title, int row) {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0; gbc.gridy = row; gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(0, 0, 15, 0);
+
+        JLabel lbl = new JLabel(title);
+        lbl.setFont(new Font("SansSerif", Font.BOLD, 16));
+        lbl.setForeground(COLOR_ACCENT);
+        panel.add(lbl, gbc);
+    }
+
+    private void addFormItem(JPanel panel, GridBagConstraints gbc, int row, String labelText, JTextField field) {
+        gbc.gridy = row * 2;
+        gbc.weighty = 0;
+        JLabel label = new JLabel(labelText);
+        label.setFont(FONT_LABEL);
+        label.setForeground(COLOR_TEXT_GRAY);
+        panel.add(label, gbc);
+
+        gbc.gridy = row * 2 + 1;
+        panel.add(field, gbc);
+    }
+
+    private JTextField createTextField() {
+        JTextField field = new JTextField();
+        field.setPreferredSize(new Dimension(0, 35));
+        field.setFont(FONT_INPUT);
+        field.setBackground(COLOR_INPUT_BG);
+        field.setForeground(COLOR_TEXT_WHITE);
+        field.setCaretColor(COLOR_TEXT_WHITE);
+        field.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(COLOR_BORDER, 1),
+                new EmptyBorder(5, 10, 5, 10)
+        ));
+        return field;
+    }
+
+    private void styleButtonPrimary(JButton btn) {
+        btn.setBackground(COLOR_ACCENT);
+        btn.setForeground(Color.WHITE);
+        btn.setFont(FONT_LABEL);
+        btn.setFocusPainted(false);
+        btn.setBorder(new EmptyBorder(10, 30, 10, 30));
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    }
+
+    private void styleButtonSecondary(JButton btn) {
+        btn.setBackground(COLOR_BG_FORM);
+        btn.setForeground(COLOR_TEXT_GRAY);
+        btn.setFont(FONT_LABEL);
+        btn.setFocusPainted(false);
+        btn.setBorder(new LineBorder(COLOR_BORDER));
+        btn.setPreferredSize(new Dimension(100, 38));
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    }
+
+    private void saveData() {
+        if (txtNama.getText().isEmpty() || txtPlat.getText().isEmpty()) {
+            // [BARU] Panggil ModernDialog Warning
+            ModernDialog.showWarning(this, "Nama dan Plat Nomor wajib diisi!");
             return;
         }
 
-        int tahun = 0;
-        try { tahun = Integer.parseInt(tahunStr); } catch (NumberFormatException e) { tahun = 2024; }
+        Customer c = new Customer(txtNama.getText(), txtHp.getText(), txtAlamat.getText());
+        Vehicle v = new Vehicle(txtPlat.getText(), txtMerk.getText(), txtTipe.getText(), txtTahun.getText());
 
-        Customer c = new Customer(nama, hp, alamat);
-        Vehicle v = new Vehicle(plat, merk, tipe, tahun, nama);
-
+        boolean success;
         if (isEditMode) {
-            // Panggil fungsi Update
-            boolean success = controller.updateData(oldPlatNumber, c, v);
-            if(success) JOptionPane.showMessageDialog(this, "Data Berhasil Diperbarui!");
-            else JOptionPane.showMessageDialog(this, "Gagal memperbarui data.");
+            success = controller.updateData(oldPlat, c, v);
         } else {
-            // Panggil fungsi Tambah Baru
             controller.addCustomerAndVehicle(c, v);
-            JOptionPane.showMessageDialog(this, "Data Baru Berhasil Disimpan!");
+            success = true;
         }
 
-        dispose(); // Tutup form
+        if (success) {
+            // [BARU] Panggil ModernDialog Success
+            ModernDialog.showSuccess(this, "Data berhasil disimpan ke database!");
+            backToTable();
+        } else {
+            // [BARU] Panggil ModernDialog Error
+            ModernDialog.showError(this, "Terjadi kesalahan saat menyimpan data.");
+        }
+    }
+
+    private void backToTable() {
+        new CustomerTable().setVisible(true);
+        dispose();
     }
 }
