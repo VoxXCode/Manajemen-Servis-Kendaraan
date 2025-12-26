@@ -7,14 +7,16 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.border.MatteBorder;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
-import javax.swing.table.TableCellEditor;
-import javax.swing.table.TableCellRenderer;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.*;
 import java.awt.*;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.util.ArrayList;
 import java.util.EventObject;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class CustomerTable extends JFrame {
 
@@ -31,10 +33,20 @@ public class CustomerTable extends JFrame {
     private final Font FONT_MAIN = new Font("SansSerif", Font.PLAIN, 14);
     private final Font FONT_BOLD = new Font("SansSerif", Font.BOLD, 14);
 
+    // --- VARIABEL PAGINATION & DATA ---
+    private int currentPage = 1;
+    // [PERUBAHAN] Batas data per halaman jadi 10
+    private final int rowsPerPage = 10;
+
+    private List<String[]> allDataCache = new ArrayList<>();
+    private List<String[]> filteredData = new ArrayList<>();
+
     private JTable table;
     private DefaultTableModel tableModel;
     private CustomerController controller;
     private JTextField txtSearch;
+    private JLabel lblPageInfo;
+    private JButton btnPrev, btnNext;
 
     public CustomerTable() {
         controller = new CustomerController();
@@ -49,7 +61,7 @@ public class CustomerTable extends JFrame {
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(COLOR_BG_MAIN);
 
-        // --- HEADER HALAMAN ---
+        // HEADER
         JPanel topHeader = new JPanel(new BorderLayout());
         topHeader.setBackground(COLOR_BG_MAIN);
         topHeader.setBorder(new EmptyBorder(25, 30, 25, 30));
@@ -62,6 +74,8 @@ public class CustomerTable extends JFrame {
         rightActions.setBackground(COLOR_BG_MAIN);
 
         txtSearch = createSearchField();
+        setupSearchLogic();
+
         JButton btnAdd = new JButton("+ New Customer");
         styleButtonPrimary(btnAdd);
         btnAdd.addActionListener(e -> {
@@ -76,7 +90,7 @@ public class CustomerTable extends JFrame {
         topHeader.add(rightActions, BorderLayout.EAST);
         mainPanel.add(topHeader, BorderLayout.NORTH);
 
-        // --- BODY ---
+        // BODY
         JPanel bodyPanel = new JPanel(new BorderLayout());
         bodyPanel.setBackground(COLOR_BG_MAIN);
         bodyPanel.setBorder(new EmptyBorder(0, 30, 20, 30));
@@ -84,23 +98,98 @@ public class CustomerTable extends JFrame {
         JScrollPane scrollPane = createTable();
         bodyPanel.add(scrollPane, BorderLayout.CENTER);
 
+        // FOOTER (PAGINATION)
         JPanel footerPanel = createPaginationFooter();
         bodyPanel.add(footerPanel, BorderLayout.SOUTH);
 
         mainPanel.add(bodyPanel, BorderLayout.CENTER);
         add(mainPanel, BorderLayout.CENTER);
 
-        loadData();
+        // LOAD DATA AWAL
+        initData();
     }
 
+    // --- LOGIKA DATA & PAGINATION ---
+    private void initData() {
+        allDataCache = controller.getAllData();
+        filteredData = new ArrayList<>(allDataCache);
+        currentPage = 1;
+        refreshTable();
+    }
+
+    private void refreshTable() {
+        tableModel.setRowCount(0);
+
+        // Hitung Pagination
+        int totalRows = filteredData.size();
+        int totalPages = (int) Math.ceil((double) totalRows / rowsPerPage);
+        if (totalPages == 0) totalPages = 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        int startIndex = (currentPage - 1) * rowsPerPage;
+        int endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+
+        // Masukkan data sesuai halaman
+        int noUrut = startIndex + 1;
+        for (int i = startIndex; i < endIndex; i++) {
+            String[] row = filteredData.get(i);
+            tableModel.addRow(new Object[]{
+                    noUrut++, row[0], row[1], row[2], row[3], row[4], row[5], row[6], ""
+            });
+        }
+
+        // Update Label Footer
+        lblPageInfo.setText(" Page " + currentPage + " of " + totalPages + " (" + totalRows + " data) ");
+
+        // Atur tombol Prev/Next
+        btnPrev.setEnabled(currentPage > 1);
+        btnNext.setEnabled(currentPage < totalPages);
+    }
+
+    private void setupSearchLogic() {
+        txtSearch.addFocusListener(new FocusListener() {
+            public void focusGained(FocusEvent e) {
+                if(txtSearch.getText().equals("  Search...")) {
+                    txtSearch.setText(""); txtSearch.setForeground(Color.WHITE);
+                }
+            }
+            public void focusLost(FocusEvent e) {
+                if(txtSearch.getText().isEmpty()) {
+                    txtSearch.setText("  Search..."); txtSearch.setForeground(COLOR_TEXT_GRAY);
+                }
+            }
+        });
+
+        txtSearch.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { doSearch(); }
+            public void removeUpdate(DocumentEvent e) { doSearch(); }
+            public void changedUpdate(DocumentEvent e) { doSearch(); }
+        });
+    }
+
+    private void doSearch() {
+        String keyword = txtSearch.getText().trim().toLowerCase();
+        if (keyword.isEmpty() || keyword.equals("search...")) {
+            filteredData = new ArrayList<>(allDataCache);
+        } else {
+            filteredData = allDataCache.stream()
+                    .filter(row ->
+                            row[0].toLowerCase().contains(keyword) || // Nama
+                                    row[3].toLowerCase().contains(keyword) || // Plat
+                                    row[4].toLowerCase().contains(keyword)    // Merk
+                    )
+                    .collect(Collectors.toList());
+        }
+        currentPage = 1;
+        refreshTable();
+    }
+
+    // --- SETUP UI TABEL ---
     private JScrollPane createTable() {
         String[] columns = {"No.", "Nama", "No HP", "Alamat", "Plat Nomor", "Merk", "Tipe", "Tahun", "Actions"};
 
         tableModel = new DefaultTableModel(columns, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return column == 8;
-            }
+            @Override public boolean isCellEditable(int row, int column) { return column == 8; }
         };
 
         table = new JTable(tableModel);
@@ -118,6 +207,7 @@ public class CustomerTable extends JFrame {
         table.setIntercellSpacing(new Dimension(0, 0));
         table.setFillsViewportHeight(true);
 
+        // Header
         JTableHeader header = table.getTableHeader();
         header.setDefaultRenderer(new HeaderRenderer());
         header.setBackground(COLOR_BG_MAIN);
@@ -128,70 +218,94 @@ public class CustomerTable extends JFrame {
         // Lebar Kolom
         table.getColumnModel().getColumn(0).setMaxWidth(40);
         table.getColumnModel().getColumn(1).setPreferredWidth(120);
-        table.getColumnModel().getColumn(2).setPreferredWidth(100);
-        table.getColumnModel().getColumn(3).setPreferredWidth(150);
-        table.getColumnModel().getColumn(4).setPreferredWidth(90);
-        table.getColumnModel().getColumn(5).setPreferredWidth(80);
-        table.getColumnModel().getColumn(6).setPreferredWidth(80);
-        table.getColumnModel().getColumn(7).setPreferredWidth(60);
         table.getColumnModel().getColumn(8).setMinWidth(160);
 
+        // Renderer Center untuk semua data
         BaseTableCellRenderer centerRenderer = new BaseTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
-
-        BaseTableCellRenderer leftRenderer = new BaseTableCellRenderer();
-        leftRenderer.setHorizontalAlignment(JLabel.LEFT);
-        leftRenderer.setPadding(10);
-
-        table.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
-        for (int i = 1; i < 8; i++) {
-            table.getColumnModel().getColumn(i).setCellRenderer(leftRenderer);
+        for (int i = 0; i < 8; i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
         }
-        table.getColumnModel().getColumn(7).setCellRenderer(centerRenderer);
 
-        // [UBAH] Menggunakan ActionButtonEditor yang baru (turunan AbstractCellEditor)
+        // Action Buttons
         table.getColumnModel().getColumn(8).setCellRenderer(new ActionButtonRenderer());
         table.getColumnModel().getColumn(8).setCellEditor(new ActionButtonEditor());
 
         JScrollPane scroll = new JScrollPane(table);
         scroll.setBorder(new LineBorder(COLOR_BORDER, 1));
         scroll.getViewport().setBackground(COLOR_BG_MAIN);
+
+        // HILANGKAN SCROLLBAR
+        scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+
         return scroll;
     }
 
-    private void loadData() {
-        tableModel.setRowCount(0);
-        List<String[]> list = controller.getAllData();
-        int no = 1;
-        for (String[] row : list) {
-            tableModel.addRow(new Object[]{
-                    no++, row[0], row[1], row[2], row[3], row[4], row[5], row[6], ""
-            });
-        }
+    // --- FOOTER PAGINATION ---
+    private JPanel createPaginationFooter() {
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setBackground(COLOR_BG_MAIN);
+        footer.setBorder(new EmptyBorder(15, 0, 0, 0));
+
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        right.setBackground(COLOR_BG_MAIN);
+
+        btnPrev = new JButton("<");
+        btnNext = new JButton(">");
+        lblPageInfo = new JLabel(" Page 1 of 1 ");
+        lblPageInfo.setForeground(COLOR_TEXT_GRAY);
+        lblPageInfo.setFont(FONT_BOLD);
+
+        stylePaginationBtn(btnPrev);
+        stylePaginationBtn(btnNext);
+
+        btnPrev.addActionListener(e -> {
+            if (currentPage > 1) {
+                currentPage--;
+                refreshTable();
+            }
+        });
+
+        btnNext.addActionListener(e -> {
+            int totalPages = (int) Math.ceil((double) filteredData.size() / rowsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                refreshTable();
+            }
+        });
+
+        right.add(btnPrev);
+        right.add(lblPageInfo);
+        right.add(btnNext);
+        footer.add(right, BorderLayout.EAST);
+        return footer;
     }
 
-    // --- BASE RENDERER ---
-    class BaseTableCellRenderer extends DefaultTableCellRenderer {
-        private int padding = 0;
-        public void setPadding(int padding) { this.padding = padding; }
+    private void stylePaginationBtn(JButton btn) {
+        btn.setBackground(COLOR_BG_TABLE);
+        btn.setForeground(COLOR_TEXT_WHITE);
+        btn.setBorder(new LineBorder(COLOR_BORDER));
+        btn.setPreferredSize(new Dimension(40, 30));
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    }
 
+    // --- RENDERERS ---
+    class BaseTableCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
             super.getTableCellRendererComponent(table, value, isSelected, false, row, column);
-
             if (isSelected) setBackground(COLOR_SELECTION);
             else setBackground(COLOR_BG_TABLE);
-
             setForeground(COLOR_TEXT_WHITE);
             setBorder(BorderFactory.createCompoundBorder(
                     new MatteBorder(0, 0, 1, 0, COLOR_BORDER),
-                    new EmptyBorder(0, padding, 0, padding)
+                    new EmptyBorder(0, 5, 0, 5)
             ));
             return this;
         }
     }
 
-    // --- HEADER RENDERER ---
     class HeaderRenderer extends DefaultTableCellRenderer {
         public HeaderRenderer() {
             setOpaque(true);
@@ -212,20 +326,18 @@ public class CustomerTable extends JFrame {
         }
     }
 
-    // --- PANEL TOMBOL ---
+    // --- ACTION BUTTONS (PANEL, RENDERER, EDITOR) ---
     class ActionPanel extends JPanel {
         public JButton btnEdit = new JButton("Edit");
         public JButton btnDelete = new JButton("Delete");
 
         public ActionPanel() {
             setLayout(new FlowLayout(FlowLayout.CENTER, 5, 12));
-            setOpaque(true); // Penting agar warna background bekerja
-
+            setOpaque(true);
+            setBackground(COLOR_BG_TABLE);
             styleActionBtn(btnEdit, new Color(255, 193, 7));
             styleActionBtn(btnDelete, new Color(220, 53, 69));
-
-            add(btnEdit);
-            add(btnDelete);
+            add(btnEdit); add(btnDelete);
         }
 
         private void styleActionBtn(JButton btn, Color c) {
@@ -241,7 +353,6 @@ public class CustomerTable extends JFrame {
         }
     }
 
-    // --- ACTION RENDERER (Saat Diam) ---
     class ActionButtonRenderer implements TableCellRenderer {
         private ActionPanel panel = new ActionPanel();
         @Override
@@ -252,41 +363,31 @@ public class CustomerTable extends JFrame {
         }
     }
 
-    // --- ACTION EDITOR (Saat Diklik) - FIX TOTAL ---
-    // Menggunakan AbstractCellEditor alih-alih DefaultCellEditor
-    // Ini menghilangkan perilaku aneh "checkbox" dan default styling Java
     class ActionButtonEditor extends AbstractCellEditor implements TableCellEditor {
         private ActionPanel panel = new ActionPanel();
         private String currentPlat;
         private String currentNama;
 
         public ActionButtonEditor() {
-            // Event Listener Tombol
             panel.btnEdit.addActionListener(e -> { fireEditingStopped(); openEditForm(); });
             panel.btnDelete.addActionListener(e -> { fireEditingStopped(); deleteData(); });
         }
 
         @Override
         public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-            // PAKSA warna background jadi abu-abu seleksi.
             panel.setBackground(COLOR_SELECTION);
-
-            // PAKSA garis bawah tetap ada
             panel.setBorder(new MatteBorder(0, 0, 1, 0, COLOR_BORDER));
 
-            // Ambil data untuk logika edit/hapus
             this.currentNama = table.getValueAt(row, 1).toString();
             this.currentPlat = table.getValueAt(row, 4).toString();
             return panel;
         }
 
-        @Override
-        public Object getCellEditorValue() { return ""; }
+        @Override public Object getCellEditorValue() { return ""; }
 
         private void openEditForm() {
-            List<String[]> allData = controller.getAllData();
             String[] dataToEdit = null;
-            for(String[] d : allData) {
+            for(String[] d : allDataCache) {
                 if(d[3].equals(currentPlat)) { dataToEdit = d; break; }
             }
             if(dataToEdit != null) {
@@ -301,7 +402,7 @@ public class CustomerTable extends JFrame {
                     "Konfirmasi Hapus", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
                 controller.deleteData(currentPlat);
-                loadData();
+                initData();
             }
         }
     }
@@ -325,21 +426,6 @@ public class CustomerTable extends JFrame {
         btn.setFocusPainted(false);
         btn.setBorder(new EmptyBorder(10, 20, 10, 20));
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-    }
-
-    private JPanel createPaginationFooter() {
-        JPanel footer = new JPanel(new BorderLayout());
-        footer.setBackground(COLOR_BG_MAIN);
-        footer.setBorder(new EmptyBorder(15, 0, 0, 0));
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        right.setBackground(COLOR_BG_MAIN);
-        JButton btnPrev = new JButton("<"); JButton btnNext = new JButton(">");
-        JLabel lblPage = new JLabel(" Page 1 of 1 "); lblPage.setForeground(COLOR_TEXT_GRAY);
-        btnPrev.setBackground(COLOR_BG_TABLE); btnPrev.setForeground(COLOR_TEXT_WHITE); btnPrev.setBorder(new LineBorder(COLOR_BORDER)); btnPrev.setPreferredSize(new Dimension(30, 30));
-        btnNext.setBackground(COLOR_BG_TABLE); btnNext.setForeground(COLOR_TEXT_WHITE); btnNext.setBorder(new LineBorder(COLOR_BORDER)); btnNext.setPreferredSize(new Dimension(30, 30));
-        right.add(btnPrev); right.add(lblPage); right.add(btnNext);
-        footer.add(right, BorderLayout.EAST);
-        return footer;
     }
 
     // --- SIDEBAR ---

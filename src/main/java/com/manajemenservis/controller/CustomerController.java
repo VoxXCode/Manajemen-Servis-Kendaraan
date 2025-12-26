@@ -15,6 +15,9 @@ import java.util.List;
 public class CustomerController {
     private static final String FILE_PATH = "data/customers.xlsx";
 
+    // [BARU] DataFormatter untuk membaca angka sebagai teks persis tampilan Excel
+    private DataFormatter formatter = new DataFormatter();
+
     public CustomerController() {
         checkAndCreateFile();
     }
@@ -55,19 +58,15 @@ public class CustomerController {
                 Row row = sheet.getRow(i);
                 if (row != null) {
                     String[] data = new String[7];
+                    // [PERBAIKAN] Menggunakan formatter agar No HP (index 1) dibaca sebagai String "08..."
                     data[0] = getCellValue(row.getCell(0));
-                    data[1] = getCellValue(row.getCell(1));
+                    data[1] = getCellValue(row.getCell(1)); // No HP
                     data[2] = getCellValue(row.getCell(2));
-                    data[3] = getCellValue(row.getCell(3)); // Plat Nomor
+                    data[3] = getCellValue(row.getCell(3));
                     data[4] = getCellValue(row.getCell(4));
                     data[5] = getCellValue(row.getCell(5));
+                    data[6] = getCellValue(row.getCell(6)); // Tahun
 
-                    Cell cellTahun = row.getCell(6);
-                    if (cellTahun != null && cellTahun.getCellType() == CellType.NUMERIC) {
-                        data[6] = String.valueOf((int) cellTahun.getNumericCellValue());
-                    } else {
-                        data[6] = getCellValue(cellTahun);
-                    }
                     list.add(data);
                 }
             }
@@ -91,7 +90,6 @@ public class CustomerController {
         }
     }
 
-    // --- FITUR BARU: UPDATE ---
     public boolean updateData(String oldPlat, Customer c, Vehicle v) {
         try (FileInputStream fis = new FileInputStream(FILE_PATH);
              Workbook workbook = new XSSFWorkbook(fis)) {
@@ -103,7 +101,7 @@ public class CustomerController {
                 if (row != null) {
                     String currentPlat = getCellValue(row.getCell(3));
                     if (currentPlat.equals(oldPlat)) {
-                        writeDataToRow(row, c, v); // Timpa data lama
+                        writeDataToRow(row, c, v);
                         found = true;
                         break;
                     }
@@ -121,12 +119,10 @@ public class CustomerController {
         }
     }
 
-    // --- FITUR BARU: DELETE ---
     public boolean deleteData(String platNomor) {
         List<String[]> allData = getAllData();
         boolean found = false;
 
-        // Hapus dari List memory
         for (int i = 0; i < allData.size(); i++) {
             if (allData.get(i)[3].equals(platNomor)) {
                 allData.remove(i);
@@ -136,7 +132,6 @@ public class CustomerController {
         }
 
         if (found) {
-            // Tulis ulang file Excel dari awal (paling aman agar tidak ada baris kosong)
             try (Workbook workbook = new XSSFWorkbook()) {
                 Sheet sheet = workbook.createSheet("Data Gabungan");
                 Row header = sheet.createRow(0);
@@ -161,7 +156,7 @@ public class CustomerController {
 
     private void writeDataToRow(Row row, Customer c, Vehicle v) {
         row.createCell(0).setCellValue(c.getName());
-        row.createCell(1).setCellValue(c.getPhoneNumber());
+        row.createCell(1).setCellValue(c.getPhoneNumber()); // Akan ditulis sebagai String
         row.createCell(2).setCellValue(c.getAddress());
         row.createCell(3).setCellValue(v.getPlateNumber());
         row.createCell(4).setCellValue(v.getBrand());
@@ -169,8 +164,11 @@ public class CustomerController {
         row.createCell(6).setCellValue(v.getYear());
     }
 
+    // [PERBAIKAN UTAMA] Menggunakan DataFormatter
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
-        return cell.getCellType() == CellType.STRING ? cell.getStringCellValue() : cell.toString();
+        // formatter.formatCellValue akan otomatis mengubah angka/formula/dll
+        // menjadi String persis seperti yang terlihat di mata user di Excel
+        return formatter.formatCellValue(cell);
     }
 }
