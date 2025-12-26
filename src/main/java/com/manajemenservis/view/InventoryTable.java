@@ -432,48 +432,69 @@ public class InventoryTable extends JFrame {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
-    // --- SIDEBAR (Menu Product di-Set Aktif) ---
     private JPanel createSidebar() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(COLOR_BG_SIDEBAR);
+        panel.setBackground(new Color(10, 10, 10));
         panel.setPreferredSize(new Dimension(240, 800));
         panel.setBorder(new EmptyBorder(30, 20, 30, 20));
+
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL; gbc.gridx = 0;
 
         JLabel brandLabel = new JLabel("<html><b>BENGKEL</b><br><b>KU</b></html>");
-        brandLabel.setFont(new Font("SansSerif", Font.BOLD, 22)); brandLabel.setForeground(COLOR_TEXT_WHITE);
+        brandLabel.setFont(new Font("SansSerif", Font.BOLD, 22));
+        brandLabel.setForeground(Color.WHITE);
         gbc.gridy = 0; gbc.insets = new Insets(0, 5, 25, 0); panel.add(brandLabel, gbc);
 
-        JPanel searchPanel = new JPanel(new BorderLayout()); searchPanel.setBackground(new Color(30, 30, 30)); searchPanel.setBorder(new EmptyBorder(8, 10, 8, 10));
-        JLabel icon = new JLabel("🔍"); icon.setForeground(COLOR_TEXT_GRAY); searchPanel.add(icon, BorderLayout.WEST);
-        gbc.gridy = 1; panel.add(searchPanel, gbc);
-
         gbc.insets = new Insets(0, 0, 8, 0);
-
-        // Menu Buttons
         gbc.gridy = 2; panel.add(createMenuButton("Overview", "📊", false), gbc);
         gbc.gridy = 3; panel.add(createMenuButton("Customer", "👥", false), gbc);
-        gbc.gridy = 4; panel.add(createMenuButton("Product", "🛍️", true), gbc); // <-- AKTIF
-        gbc.gridy = 5; panel.add(createMenuButton("History", "📜", false), gbc);
+        gbc.gridy = 4; panel.add(createMenuButton("Product", "🛍️", true), gbc); // TRUE karena ini InventoryTable
+        gbc.gridy = 5; panel.add(createMenuButton("Input Servis", "📄", false), gbc);
+        gbc.gridy = 6; panel.add(createMenuButton("History", "📜", false), gbc);
 
-        gbc.gridy = 6; gbc.weighty = 1.0; panel.add(Box.createGlue(), gbc);
-        gbc.weighty = 0; gbc.gridy = 7; panel.add(createMenuButton("Settings", "🛠️", false), gbc);
-        gbc.gridy = 8; JButton btnLogout = createMenuButton("Logout", "❓", false); btnLogout.addActionListener(e -> new AuthController().logout(this)); panel.add(btnLogout, gbc);
+        gbc.gridy = 7; gbc.weighty = 1.0; panel.add(Box.createGlue(), gbc);
+        gbc.weighty = 0;
+        gbc.gridy = 8;
+        JButton btnLogout = createMenuButton("Logout", "❓", false);
+        btnLogout.addActionListener(e -> new com.manajemenservis.controller.AuthController().logout(this));
+        panel.add(btnLogout, gbc);
+
         return panel;
     }
 
     private JButton createMenuButton(String text, String icon, boolean isActive) {
         JButton btn = new JButton("  " + icon + "    " + text);
-        btn.setFont(FONT_MAIN); btn.setForeground(isActive ? COLOR_TEXT_WHITE : COLOR_TEXT_GRAY);
-        btn.setBackground(COLOR_BG_SIDEBAR); btn.setBorderPainted(false); btn.setFocusPainted(false);
-        btn.setContentAreaFilled(false); btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)); btn.setBorder(new EmptyBorder(8, 5, 8, 0));
+        btn.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        btn.setForeground(isActive ? Color.WHITE : new Color(150, 150, 150));
+        btn.setBackground(new Color(10, 10, 10));
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setHorizontalAlignment(SwingConstants.LEFT);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setBorder(new EmptyBorder(8, 5, 8, 0));
 
-        // Navigasi
-        if(text.equals("Overview")) btn.addActionListener(e->{new DashboardView().setVisible(true);dispose();});
-        if(text.equals("Customer")) btn.addActionListener(e->{new CustomerTable().setVisible(true);dispose();});
-        if(text.equals("History")) btn.addActionListener(e->{new ServiceHistoryTable().setVisible(true);dispose();});
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent e) { btn.setForeground(Color.WHITE); }
+            public void mouseExited(java.awt.event.MouseEvent e) { if(!isActive) btn.setForeground(new Color(150, 150, 150)); }
+        });
+
+        // --- NAVIGASI LENGKAP ---
+        // Cek pakai string equals saja agar aman
+        if(text.equals("Overview")) btn.addActionListener(e -> { new DashboardView().setVisible(true); dispose(); });
+
+        // Cek agar tidak membuka diri sendiri (Opsional tapi bagus)
+        if(text.equals("Customer") && !this.getClass().getSimpleName().equals("CustomerTable"))
+            btn.addActionListener(e -> { new CustomerTable().setVisible(true); dispose(); });
+
+        if(text.equals("Product") && !this.getClass().getSimpleName().equals("InventoryTable"))
+            btn.addActionListener(e -> { new InventoryTable().setVisible(true); dispose(); });
+
+        if(text.equals("History")) btn.addActionListener(e -> { new ServiceHistoryTable().setVisible(true); dispose(); });
+
+        // [LINK KE FORM INPUT]
+        if(text.equals("Input Servis")) btn.addActionListener(e -> { new ServiceEntryForm().setVisible(true); dispose(); });
 
         return btn;
     }

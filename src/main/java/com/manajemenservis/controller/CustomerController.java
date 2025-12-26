@@ -85,6 +85,12 @@ public class CustomerController {
             try (FileOutputStream out = new FileOutputStream(FILE_PATH)) {
                 workbook.write(out);
             }
+
+            new ServiceController().addLog(
+                    "Pelanggan Baru: " + c.getName(),
+                    v.getPlateNumber()
+            );
+
         } catch (IOException e) {
             e.printStackTrace();
         }

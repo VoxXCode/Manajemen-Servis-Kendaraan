@@ -102,6 +102,12 @@ public class InventoryController {
             try (FileOutputStream out = new FileOutputStream(FILE_PATH)) {
                 workbook.write(out);
             }
+
+            new ServiceController().addLog(
+                    "Stok Masuk: " + sp.getNama() + " (Jml: " + sp.getStok() + " " + sp.getSatuan() + ")",
+                    "-"
+            );
+
         } catch (IOException e) {
             e.printStackTrace();
         }
