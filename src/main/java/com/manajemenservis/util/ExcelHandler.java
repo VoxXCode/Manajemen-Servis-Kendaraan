@@ -10,19 +10,16 @@ import java.io.IOException;
 
 public class ExcelHandler {
 
-    // Menyimpan file di folder "data" agar root project tidak berantakan
     private static final String FOLDER_NAME = "data";
     private static final String FILE_NAME = "users.xlsx";
     private static final String FILE_PATH = FOLDER_NAME + File.separator + FILE_NAME;
 
     public static void pastikanFileAda() {
-        // 1. Buat folder "data" jika belum ada
         File folder = new File(FOLDER_NAME);
         if (!folder.exists()) {
             folder.mkdirs();
         }
 
-        // 2. Buat file "users.xlsx" jika belum ada
         File file = new File(FILE_PATH);
         if (!file.exists()) {
             System.out.println("File database belum ada. Membuat baru di: " + FILE_PATH);
@@ -30,12 +27,10 @@ public class ExcelHandler {
             try (Workbook workbook = new XSSFWorkbook()) {
                 Sheet sheet = workbook.createSheet("Users");
 
-                // Header
                 Row headerRow = sheet.createRow(0);
                 headerRow.createCell(0).setCellValue("Username");
                 headerRow.createCell(1).setCellValue("Password");
 
-                // Akun Default
                 Row dataRow = sheet.createRow(1);
                 dataRow.createCell(0).setCellValue("admin");
                 dataRow.createCell(1).setCellValue("admin123");

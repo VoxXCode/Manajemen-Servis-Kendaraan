@@ -1,40 +1,27 @@
 package com.manajemenservis.model;
 
 public class SparePart {
-    private String itemName;
-    private double price;
-    private int stock;
+    private String kode;
+    private String nama;
+    private String kategori;
+    private int stok;
+    private double hargaJual;
+    private String satuan;
 
-    public SparePart() {
+    public SparePart(String kode, String nama, String kategori, int stok, double hargaJual, String satuan) {
+        this.kode = kode;
+        this.nama = nama;
+        this.kategori = kategori;
+        this.stok = stok;
+        this.hargaJual = hargaJual;
+        this.satuan = satuan;
     }
 
-    public SparePart(String itemName, double price, int stock) {
-        this.itemName = itemName;
-        this.price = price;
-        this.stock = stock;
-    }
-
-    public String getItemName() {
-        return itemName;
-    }
-
-    public void setItemName(String itemName) {
-        this.itemName = itemName;
-    }
-
-    public double getPrice() {
-        return price;
-    }
-
-    public void setPrice(double price) {
-        this.price = price;
-    }
-
-    public int getStock() {
-        return stock;
-    }
-
-    public void setStock(int stock) {
-        this.stock = stock;
-    }
+    // Getters
+    public String getKode() { return kode; }
+    public String getNama() { return nama; }
+    public String getKategori() { return kategori; }
+    public int getStok() { return stok; }
+    public double getHargaJual() { return hargaJual; }
+    public String getSatuan() { return satuan; }
 }
